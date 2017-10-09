@@ -1,15 +1,15 @@
 {
-  "id": "7ca5869f-a901-4012-a50d-d0f9d436ffec",
-  "name": "rvo-vsts-promotepackage-task",
-  "friendlyName": "#{PrivatePublicExtension}#Promote package to Release View",
-  "description": "Promotes a package to a Release View in VSTS Package Management",
-  "helpMarkDown": "Version: #{PrivatePublicExtension}##{Build.BuildNumber}#. [More Information](https://github.com/renevanosnabrugge/vsts-promotepackage-task/wiki)",
+  "id": "8292684d-e13f-493b-818e-3ec9cf1be482",
+  "name": "dennismicheelsen-promotepackages-task",
+  "friendlyName": "Promote packages to Release View",
+  "description": "Promotes packages to a Release View in VSTS/TFS Package Management",
+  "helpMarkDown": "Promotes either a package folder, or ",
   "category": "Package",
-  "author": "Rene van Osnabrugge",
+  "author": "Dennis Micheelsen",
   "version": {
     "Major": 0,
-    "Minor": 0,
-    "Patch": 0
+    "Minor": 4,
+    "Patch": 15
   },
   "visibility": [
     "Build",
@@ -28,13 +28,36 @@
       "name": "feed",
       "groupName": "general",
       "type": "pickList",
-      "label": "Use packages from this VSTS feed",
+      "label": "Use this TFS feed",
       "defaultValue": "",
-      "helpMarkDown": "Include the selected feed in the generated NuGet.config.",
+      "helpMarkDown": "Push to this feed, and if any symbols packages is generated, pushes those to a <FEEDNAME>-symbols feed",
       "required": "true",
       "properties": {
         "EditableOptions": "true"
       }
+    },
+    {
+      "name": "packageorfolder",
+      "groupname": "general",
+      "type": "radio",
+      "defaultValue": "folder",
+      "options": {
+        "folder": "folder of packages",
+        "package": "Specific package"
+      }
+    },
+    {
+      "name": "pattern",
+      "groupName": "general",
+      "type": "filePath",
+      "label": "Pattern for locating packages",
+      "defaultValue": "$(Build.StagingDirectory)\\packages",
+      "helpMarkDown": "",
+      "required": "true",
+      "properties": {
+        "EditableOptions": "true"
+      },
+      "visibleRule": "packageorfolder = folder"
     },
     {
       "name": "definition",
@@ -43,10 +66,11 @@
       "label": "Package",
       "defaultValue": "",
       "helpMarkDown": "Select the package that you want to promote",
-      "required": "true",
+      "required": "false",
       "properties": {
         "EditableOptions": "true"
-      }
+      },
+      "visibleRule": "packageorfolder = package"
     },
     {
       "name": "version",
@@ -54,11 +78,12 @@
       "type": "pickList",
       "label": "Package Version",
       "defaultValue": "",
-      "helpMarkDown": "Select the package that you want to promote",
-      "required": "true",
+      "helpMarkDown": "Select the version of the package that you want to promote",
+      "required": "false",
       "properties": {
         "EditableOptions": "true"
-      }
+      },
+      "visibleRule": "packageorfolder = package"
     },
     {
       "name": "releaseView",
@@ -66,7 +91,7 @@
       "type": "pickList",
       "label": "Release Views",
       "defaultValue": "",
-      "helpMarkDown": "Select the package that you want to promote",
+      "helpMarkDown": "Select the view to promote the package(s) to",
       "required": "true",
       "properties": {
         "EditableOptions": "false"
@@ -79,7 +104,14 @@
       "endpointId": "tfs:feed",
       "endpointUrl": "{{endpoint.url}}/_apis/packaging/feeds",
       "resultSelector": "jsonpath:$.value[*]",
-      "resultTemplate": "{ \"Value\" : \"{{{id}}}\", \"DisplayValue\" : \"{{{name}}}\" }"
+      "resultTemplate": "{ \"Value\" : \"{{{name}}}\", \"DisplayValue\" : \"{{{name}}}\" }"
+    },
+    {
+      "target": "symbolfeed",
+      "endpointId": "tfs:feed",
+      "endpointUrl": "{{endpoint.url}}/_apis/packaging/feeds",
+      "resultSelector": "jsonpath:$.value[*]",
+      "resultTemplate": "{ \"Value\" : \"{{{name}}}\", \"DisplayValue\" : \"{{{name}}}\" }"
     },
     {
       "target": "definition",
@@ -110,10 +142,10 @@
       },
       "endpointUrl": "{{endpoint.url}}/_apis/Packaging/Feeds/{{{feed}}}/views",
       "resultSelector": "jsonpath:$.value[*]",
-      "resultTemplate": "{ \"Value\" : \"{{{id}}}\", \"DisplayValue\" : \"{{{name}}}\" }"
+      "resultTemplate": "{ \"Value\" : \"{{{name}}}\", \"DisplayValue\" : \"{{{name}}}\" }"
     }
   ],
-  "instanceNameFormat": "Promote package to Release View",
+  "instanceNameFormat": "Promote packages to Release View",
   "execution": {
     "PowerShell3": {
       "target": "$(currentDirectory)\\vsts-promotepackage-task.ps1",
